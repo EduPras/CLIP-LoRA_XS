@@ -51,9 +51,9 @@ class LoRALayer():
         """
         Register LoRA-XS params, accordingly to https://arxiv.org/abs/2405.17604 (Section 3.2):
         U_r, S_r, Vt_r <- SVD_r(W) # SVD truncated
-        A <- U_r x S_r  # Frozen
-        B <- Vt_r       # Frozen
-        R <- (r, r) R   # Learnable
+        A <- U_r x S_r      # Frozen
+        B <- Vt_r           # Frozen
+        R <- (r, r) zeros   # Learnable
         """
         for param_name, lora_name in self.params_with_lora.items():
             W = eval(f'self.{param_name}').detach()
