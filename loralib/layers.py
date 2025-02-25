@@ -47,25 +47,9 @@ class LoRALayer():
         # define params that require LoRA {'param_name': 'lora_name'}
         self.params_with_lora = {}
 
-    # def register_lora_param(self):
-    #     print(f'DEBUG [register_lora_param]: printing params')
-    #     r"""Register LoRA matrix"""
-    #     for param_name, lora_name in self.params_with_lora.items():
-    #         print(f'\t{param_name} -> {lora_name}')
-    #         assert len(eval(f'self.{param_name}').size()) == 2
-    #         self.register_parameter(f'{lora_name}_lora_A', 
-    #             nn.Parameter(eval(f'self.{param_name}').new_zeros((self.r, eval(f'self.{param_name}').size()[1])))
-    #             )
-    #         self.register_parameter(f'{lora_name}_lora_B', 
-    #             nn.Parameter(eval(f'self.{param_name}').new_zeros((eval(f'self.{param_name}').size()[0], self.r)))
-    #             )
-                
-    #         eval(f'self.{param_name}').requires_grad = False
-
     def register_lora_param(self):
         # For each parameter that we want to adapt, compute its SVD and set up the frozen
         # low-rank matrices and a trainable r×r matrix R.
-        # print(f'DEBUG [register_lora_param]: printing params')
         for param_name, lora_name in self.params_with_lora.items():
             # print(f'\t{param_name} -> {lora_name}')
             # Get the original weight W (detach it so gradients are not computed)
@@ -76,7 +60,6 @@ class LoRALayer():
             U_r = U[:, :self.r]        # shape: (m, r)
             S_r = S[:self.r]           # shape: (r,)
             Vt_r = Vt[:self.r, :]       # shape: (r, n)
-
             # Compute frozen matrices: A_frozen = U_r * S_r and B_frozen = Vh_r
             A_frozen = U_r @ torch.diag(S_r)  # shape: (m, r)
             B_frozen = Vt_r                    # shape: (r, n)
@@ -89,20 +72,9 @@ class LoRALayer():
             eval(f'self.{param_name}').requires_grad = False
 
 
-    # def init_lora_param(self):
-    #     print(f'DEBUG [init_lora_param]: printing params')
-    #     for param_name, lora_name in self.params_with_lora.items():
-    #         print(f'\t{param_name} -> {lora_name}')
-    #         if hasattr(self, f'{lora_name}_lora_A'):
-    #             # initialize A the same way as the default for nn.Linear and B to zero
-    #             nn.init.kaiming_uniform_(eval(f'self.{lora_name}_lora_A'), a=math.sqrt(5))
-    #             nn.init.zeros_(eval(f'self.{lora_name}_lora_B'))
-
     def init_lora_param(self):
-        # print(f'DEBUG [init_lora_param]: printing params')
         # Initialize the trainable R with a small Gaussian noise
         for param_name, lora_name in self.params_with_lora.items():
-            # print(f'\t{param_name} -> {lora_name}')
             if hasattr(self, f'{lora_name}_lora_R'):
                 nn.init.normal_(getattr(self, f'{lora_name}_lora_R'), std=1e-5)
             else:
@@ -112,12 +84,6 @@ class LoRALayer():
         return w.transpose(0, 1) if self.fan_in_fan_out else w
 
     
-    # def merge_BA(self, param_name: str):
-    #     print(f'DEBUG [merge_BA]: printing params')
-    #     lora_name = self.params_with_lora[param_name]
-    #     print(f'\t{lora_name}')
-    #     return self.transpose((eval(f'self.{lora_name}_lora_B') @ eval(f'self.{lora_name}_lora_A')).view(eval(f'self.{param_name}').shape))
-
     def merge_BA(self, param_name: str):
         # In LoRA-XS, instead of B @ A, we compute: A_frozen @ R @ B_frozen,
         # then transpose if needed.
@@ -161,19 +127,6 @@ class LoRALayer():
             # Merge the weights and mark it
                 self.add_lora_data()
             self.merged = True 
-
-    # Utility methods for registering buffers and parameters in LoRALayer.
-    # def register_buffer(self, name: str, tensor: torch.Tensor):
-    #     # Assume self is an nn.Module
-    #     if not hasattr(self, '_buffers'):
-    #         self._buffers = {}
-    #     self._buffers[name] = tensor
-
-    # def register_parameter(self, name: str, param: nn.Parameter):
-    #     # Assume self is an nn.Module
-    #     if not hasattr(self, '_parameters'):
-    #         self._parameters = {}
-    #     self._parameters[name] = param
 
 class LinearLoRA(nn.Linear, LoRALayer):
     # LoRA implemented in a Linear layer
