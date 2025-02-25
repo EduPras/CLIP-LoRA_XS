@@ -48,32 +48,37 @@ class LoRALayer():
         self.params_with_lora = {}
 
     def register_lora_param(self):
-        # For each parameter that we want to adapt, compute its SVD and set up the frozen
-        # low-rank matrices and a trainable r×r matrix R.
+        """
+        Register LoRA-XS params, accordingly to https://arxiv.org/abs/2405.17604 (Section 3.2):
+        U_r, S_r, Vt_r <- SVD_r(W) # SVD truncated
+        A <- U_r x S_r  # Frozen
+        B <- Vt_r       # Frozen
+        R <- (r, r) R   # Learnable
+        """
         for param_name, lora_name in self.params_with_lora.items():
-            # print(f'\t{param_name} -> {lora_name}')
-            # Get the original weight W (detach it so gradients are not computed)
             W = eval(f'self.{param_name}').detach()
-            # Compute SVD: here we use torch.linalg.svd (full_matrices=False)
+            # Compute SVD, shapes: U (m, m), S(m, n) and Vt(n, n)
             U, S, Vt = torch.linalg.svd(W, full_matrices=False)
-            # Take the top r singular components
-            U_r = U[:, :self.r]        # shape: (m, r)
-            S_r = S[:self.r]           # shape: (r,)
-            Vt_r = Vt[:self.r, :]       # shape: (r, n)
-            # Compute frozen matrices: A_frozen = U_r * S_r and B_frozen = Vh_r
-            A_frozen = U_r @ torch.diag(S_r)  # shape: (m, r)
+            # Top r singular values 
+            U_r = U[:, :self.r]        #(m, r)
+            S_r = S[:self.r]           #(r,)
+            Vt_r = Vt[:self.r, :]      #(r, n)
+            # A_frozen = U_r * S_r and B_frozen = Vh_r
+            A_frozen = U_r @ torch.diag(S_r)   # shape: (m, r)
             B_frozen = Vt_r                    # shape: (r, n)
-            # Register these as buffers so they are not updated by gradients
+            # Buffers are not updated by gradients
             self.register_buffer(f'{lora_name}_A_frozen', A_frozen)
             self.register_buffer(f'{lora_name}_B_frozen', B_frozen)
-            # Create a new trainable parameter R of shape (r, r)
+            # Trainable parameter R (r, r)
             self.register_parameter(f'{lora_name}_lora_R', nn.Parameter(W.new_zeros((self.r, self.r))))
-            # Freeze the original parameter
+            # Freeze original param
             eval(f'self.{param_name}').requires_grad = False
 
 
     def init_lora_param(self):
-        # Initialize the trainable R with a small Gaussian noise
+        """
+        Initialize R matrix with normal(0, 1e-5) (Section 3.2)
+        """
         for param_name, lora_name in self.params_with_lora.items():
             if hasattr(self, f'{lora_name}_lora_R'):
                 nn.init.normal_(getattr(self, f'{lora_name}_lora_R'), std=1e-5)
@@ -85,8 +90,6 @@ class LoRALayer():
 
     
     def merge_BA(self, param_name: str):
-        # In LoRA-XS, instead of B @ A, we compute: A_frozen @ R @ B_frozen,
-        # then transpose if needed.
         lora_name = self.params_with_lora[param_name]
         A_frozen = getattr(self, f'{lora_name}_A_frozen')
         R = getattr(self, f'{lora_name}_lora_R')
