@@ -38,7 +38,8 @@ def get_arguments():
     
     parser.add_argument('--save_path', default=None, help='path to save the lora modules after training, not saved if None')
     parser.add_argument('--filename', default='lora_weights', help='file name to save the lora weights (.pt extension will be added)')
-    
+
+    parser.add_argument('--result_filename', default=None, required=False)
     parser.add_argument('--eval_only', default=False, action='store_true', help='only evaluate the LoRA modules (save_path should not be None)')
     args = parser.parse_args()
 

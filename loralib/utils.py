@@ -159,23 +159,18 @@ def save_lora(args, list_lora_layers):
         layer_weights = {}
         if 'q' in args.params:
             layer_weights['q_proj'] = {
-                'w_lora_A': layer.q_proj.w_lora_A.data,
-                'w_lora_B': layer.q_proj.w_lora_B.data
+                'w_lora_R': layer.q_proj.w_lora_R.data,
             }
         if 'k' in args.params:
             layer_weights['k_proj'] = {
-                'w_lora_A': layer.k_proj.w_lora_A.data,
-                'w_lora_B': layer.k_proj.w_lora_B.data
-            }
+                'w_lora_R': layer.q_proj.w_lora_R.data            }
         if 'v' in args.params:
             layer_weights['v_proj'] = {
-                'w_lora_A': layer.v_proj.w_lora_A.data,
-                'w_lora_B': layer.v_proj.w_lora_B.data
+                'w_lora_R': layer.v_proj.w_lora_R.data
             }
         if 'o' in args.params:
             layer_weights['proj'] = {
-                'w_lora_A': layer.proj.w_lora_A.data,
-                'w_lora_B': layer.proj.w_lora_B.data
+                'w_lora_R': layer.proj.w_lora_R.data,
             }
 
         weights[f'layer_{i}'] = layer_weights
@@ -234,22 +229,15 @@ def load_lora(args, list_lora_layers):
     for i, layer in enumerate(list_lora_layers):
         layer_weights = weights[f'layer_{i}']
         if 'q' in args.params and 'q_proj' in layer_weights:
-            layer.q_proj.w_lora_A.data.copy_(
-                layer_weights['q_proj']['w_lora_A'])
-            layer.q_proj.w_lora_B.data.copy_(
-                layer_weights['q_proj']['w_lora_B'])
+            layer.q_proj.w_lora_R.data.copy_(
+                layer_weights['q_proj']['w_lora_R'])
         if 'k' in args.params and 'k_proj' in layer_weights:
-            layer.k_proj.w_lora_A.data.copy_(
-                layer_weights['k_proj']['w_lora_A'])
-            layer.k_proj.w_lora_B.data.copy_(
-                layer_weights['k_proj']['w_lora_B'])
+            layer.k_proj.w_lora_R.data.copy_(
+                layer_weights['k_proj']['w_lora_R'])
         if 'v' in args.params and 'v_proj' in layer_weights:
-            layer.v_proj.w_lora_A.data.copy_(
-                layer_weights['v_proj']['w_lora_A'])
-            layer.v_proj.w_lora_B.data.copy_(
-                layer_weights['v_proj']['w_lora_B'])
+            layer.v_proj.w_lora_R.data.copy_(
+                layer_weights['v_proj']['w_lora_R'])
         if 'o' in args.params and 'proj' in layer_weights:
-            layer.proj.w_lora_A.data.copy_(layer_weights['proj']['w_lora_A'])
-            layer.proj.w_lora_B.data.copy_(layer_weights['proj']['w_lora_B'])
+            layer.proj.w_lora_R.data.copy_(layer_weights['proj']['w_lora_R'])
 
     print(f'LoRA weights loaded from {load_path}')

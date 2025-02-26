@@ -1,6 +1,8 @@
 from tqdm import tqdm
 import torch
 import clip
+import os
+import pandas as pd
 
 def cls_acc(output, target, topk=1):
     pred = output.topk(topk, 1, True, True)[1].t()
@@ -39,6 +41,24 @@ def pre_load_features(clip_model, loader):
             features.append(image_features.cpu())
             labels.append(target.cpu())
         features, labels = torch.cat(features), torch.cat(labels)
-    
     return features, labels
 
+def print_number_params(model):
+    total_params =  sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    percentage = 100 * trainable_params / total_params
+    print(f"Trainable parameters: {trainable_params} / {total_params} ({percentage:.2f}%)")
+
+
+def append_csv(file_path, new_row):
+    if os.path.exists(file_path):
+        df = pd.read_csv(file_path)
+    else:
+        df = pd.DataFrame()
+    
+    # Create a DataFrame from the new row and append it.
+    new_df = pd.DataFrame([new_row])
+    df = pd.concat([df, new_df], ignore_index=True)
+
+    df.to_csv(file_path, index=False)
+    print(f"Appended new row to {file_path}: {new_row}")
